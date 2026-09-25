@@ -1,95 +1,217 @@
+## 24.09.2026 (2)
+
 ```diff
-# Obsidian UI — Build
-
-**Tanggal update:** Selasa, 8 September 2026  
-**File:** `Libary.lua`  
-**Base:** Obsidian UI (deividcomsono)
----
-
-## Fitur yang ditambahkan
-
-### Dari custom mod (sebelumnya)
-| Fitur | API | Keterangan |
-|--------|-----|------------|
-| **Window Tag / Badge** | `Window:AddTag(...)` | Badge di title bar (PREMIUM, v1.6.0, dll) |
-| **Window Shadow** | `Shadow = true` / `Window:SetShadow(...)` | Bayangan lembut (default ON) |
-| **Window Glow** | `Glow = true` / `Window:SetGlow(...)` | Halo accent di belakang window |
-| **Gradient** | `Gradient = true` / `Window:SetGradient(...)` | Overlay gradient di background |
-| **Label Badge** | `AddLabel({ Badge = "LIVE" })` | Badge kecil di label |
-| **Popup** | `Library:CreatePopup(...)` / `Window:AddPopup(...)` | Kartu notifikasi di tengah |
-| **Background Video** | `BackgroundVideo = id` / `SetBackgroundVideo` | Video sebagai background window |
-| **Fullscreen Background** | `FullscreenBackground = true` | Backdrop fullscreen saat UI buka |
-
-|--------|-----|------------|
-| **AddTable** | `Groupbox:AddTable(idx, info)` | Tabel data + sort per kolom |
-| **User Profile** | `Window:SetUserProfile(info)` | Kartu user di bawah sidebar |
-| **Hide Profile** | `Window:HideUserProfile()` | Sembunyikan profile |
-
----
-
-## Contoh pemakaian singkat
-
-### Tag
-```lua
-Window:AddTag("PREMIUM")
-Window:AddTag({
-    Text = "v1.6.0",
-    BackgroundColor = "MainColor",
-    TextColor = "FontColor",
-})
+[additions]
++ Groupbox:AddStatusLabel(Idx, Info) -- a scrolling list of rows, each with a live
+  status on its right. A row with a Time counts down to that moment ("9 min", "2 hr");
+  a row without one, or past it, shows the plain status word ("Up") in accent. Clicking
+  any countdown flips the whole list between the countdown and the clock time it lands
+  on -- two readings of the same instant, the way a date in a document can be shown
+  either way. Rows live in a ScrollingFrame capped at MaxHeight (120 by default), so a
+  long list scrolls instead of stretching the groupbox. Items are { Text, Status, Time,
+  Suffix, StatusColor, TimeColor, TimeFormat, Tooltip }; the element exposes SetItems,
+  AddItem, UpdateItem, Clear, SetMode, Toggle, SetMaxHeight and SetVisible, and is
+  indexed into Library.Labels. One heartbeat per list, throttled to a tick a second.
 ```
 
-### Shadow / Glow / Gradient
-```lua
-Library:CreateWindow({
-    Title = "Script",
-    Shadow = true,
-    Glow = false,
-    Gradient = true,
-})
+## 24.09.2026
+
+```diff
+[changes]
+* Merged upstream Obsidian (44 commits, through "feat: SetPopOutWidth"). Upstream won
+  every API and behaviour conflict; the fork kept its own styling where upstream had
+  only restyled the same region. What this changes for callers:
+* Library:PlayTabAnimation(Tab, Showing, OnComplete, SwipeFrom) now takes the tab
+  table rather than its canvas -- upstream animates Tab.Container and dropped the
+  CanvasGroup wrapper around tab contents, which is their fix for blurry tab text. A
+  bare container instance is still accepted, so sub tabs pass their own canvas as
+  before, and a CanvasGroup container still fades as well as slides.
+* Tab buttons gained upstream's ButtonHolder, TabIndicator and TabButtonsStyle. The
+  chip skin (Library:SkinTabButton) still owns the corner, the chip and the active
+  state, so upstream's own UICorner is not created and CornerRadius has no effect.
+  TabButtonsStyle defaults to Gap = 4, Padding = 6 here, which is the spacing the
+  skin was drawn against and what keeps MinSidebarWidth at 76.
+* Search is upstream's scored implementation: every tab is searched and the window
+  switches to the most prominent match. Sub tab recursion and GlobalSearch are kept on
+  top -- GlobalSearch now only decides whether tabs other than the best match keep
+  their filtered state.
+* Tooltips take upstream's cursor-aware placement; the pop animation stays.
+* Example.lua is upstream's, pointed back at this fork's raw URL. The fork's own
+  element demos are no longer in it.
 ```
 
-### Popup
-```lua
-Window:AddPopup({
-    Title = "Loaded",
-    Description = "Script siap dipakai.",
-    Time = 4,
-    Actions = {
-        { Title = "OK", Variant = "Primary" },
-    },
-})
+## 21.09.2026 (2)
+
+```diff
+[changes]
+* Reverted the drag gate, the shared element states and the groupbox header
+  badge. MakeDraggable is back to moving the window the moment the handle is
+  pressed, checkboxes, toggles, buttons and dropdowns keep the state colours
+  they each had, and Groupbox:SetBadge / the Badge and ShowActiveCount fields
+  are gone again.
+* Kept out of that revert: the constants that moved into tables so the main
+  chunk clears Luau's 200 local register limit. The Discord card metrics, the
+  player card insets and the notification history sizes each live in one table,
+  which is what lets the file compile at -O0 the way an executor loads it.
+  Anything added near the top level should go in a table for the same reason;
+  `luau-compile -O0` is the check, since -O1 and above reuse registers and
+  compile a file that is over the limit without complaint.
 ```
 
-### Table (Sizsense)
-```lua
-local T = Groupbox:AddTable("List", {
-    Columns = { "#", "Name", "Value" },
-    Rows = {
-        { 1, "A", 100 },
-        { 2, "B", 250 },
-    },
-    MaxRows = 10,
-    Sortable = true,
-})
-T:AddRow({ 3, "C", 50 })
+## 21.09.2026
+
+```diff
+[changes]
+* Sliders read as a channel with light in it, and stay flat. The track is sunk to
+  the background colour instead of the panel colour and grown 15 -> 18px, and the
+  fill runs a gradient along the bar -- shaded at the root, full accent at the head
+  -- rather than sitting as one solid block. Nothing rides on the bar: no ball, no
+  handle, no rim. Hovering warms the track edge to the accent at 0.4 and that is
+  all. Programmatic value changes now glide the fill into place; dragging stays
+  glued to the cursor, frame for frame. Compact sliders share the new height, and
+  the label gap went 2 -> 3px.
+* A tabbox's tab strip is a segmented control. The row is a recessed rail inset 4px
+  inside the card, and the open tab is a raised accent chip that slides between the
+  segments, lit along its top edge by a white-to-grey gradient over the accent. The
+  open tab's label and glyph flip to black or white -- whichever the accent can
+  carry -- while the rest sit at 0.55 against the rail and climb to 0.25 under the
+  pointer. The old centred underline is gone; the chip marks the open tab now, and
+  the header divider still separates the strip from the content below.
+* Nine more pink themes: Cotton Candy, Neon Bubblegum, Rosewater, Strawberry Milk,
+  Peony, Magenta Dusk, Pink Lemonade, Hot Pink Void and Orchid Haze -- from a muted
+  rosewater through milk-and-strawberry mids to a hot pink on near-black.
 ```
 
-### User Profile (Sizsense)
-```lua
-Window:SetUserProfile({
-    Name = "PlayerName",
-    UserId = game.Players.LocalPlayer.UserId,
-    Status = "Premium",
-    OnLogout = function()
-        Library:Unload()
-    end,
-})
+## 20.09.2026
 
+```diff
+[changes]
+* Sidebar tab hover is a well at both widths. Expanded rows used to answer a hover by
+  lifting the label from 0.5 to 0.25 transparency and nothing else, which is a change
+  you have to be looking for; they now raise the same light well the compact column
+  does, shaped to the row (the full card, grown back out through the button's padding
+  so it covers exactly what the open row's fill covers) and rounded at the bar radius
+  rather than the chip's. The compact well was raised from 0.92 to 0.88 so it is
+  actually visible, and it swells 24 -> 27px under the pointer the way the chip grows
+  when it opens; the wide row sits at 0.94, since a card carries far more light than a
+  24px square at the same alpha. Label and glyph now go to 0.1 on hover instead of
+  0.25, so the well carries the state and the text only finishes the climb.
+* The accent edge marker is drawn at both widths. An expanded open tab was a filled
+  card with no accent anywhere on it; the 3x22 rail now lights for it too, which ties
+  the expanded row back to the compact chip instead of leaving the two widths looking
+  like different controls.
+* Sliders are flat again: the label sits above a plain 15px track with the value
+  centred inside it. The ball, its shadow, the inner ring and the grey track
+  gradient are gone, the bar takes the panel colour rather than the font colour,
+  and both bar and fill round at half the window radius instead of into a pill.
+  The value now reads "6 studs / 10 studs", spaced either side of the slash.
+* Compact sidebar tabs are now dock chips: while the sidebar is compact, the open
+  tab's glyph sits on a 30px accent-filled rounded square (a white-to-grey gradient
+  over the accent, plus a white top rim) and flips to black or white -- whichever
+  reads against the accent. A 3x22 accent marker sits hard against the sidebar's
+  left edge, level with the chip, tapering away at both tips. Switching tabs slides
+  both: the incoming pair enters from the side the previous tab sits on while it
+  fades in, and the outgoing pair leaves towards the new one as it fades out, so the
+  mark reads as being carried down the column rather than blinking from place to
+  place. Hovering an inactive glyph raises a plain light
+  well rather than a faint accent chip, and switching tabs grows the chip from 24px. Expanding the sidebar brings
+  the labels back and drops both: a row with a label is a row, not a chip, so the
+  button returns to the plain full-width card.
+* Compact glyphs sit at 18px (padding 6 -> 11) so they read inside the chip.
+* Sidebar tab list gets a 6px gutter with 4px between buttons; minimum sidebar and
+  compact widths were nudged up to keep the buttons the same size inside it.
 
----
+[fixes]
+* A chip that had slid away on a tab switch stayed offset, so it was drawn crooked in
+  its own button the next time it was hovered. The pair is now put back once the
+  slide has finished and it is out of sight.
+* Compact chips no longer stay lit as a hover after being selected: Tab:Hover returns
+  early while a tab is the open one, so a tab clicked with the pointer on it was never
+  told the pointer left and lit back up the moment it was deselected. The chip now
+  tracks hover on the button's own signals and drops it on selection.
+```
 
-**Last updated:** 2026-09-08
+## 02.09.2026
+
+```diff
+[changes]
+* Groupboxes now slide open/shut when collapsed instead of snapping — the body is
+  clipped behind the card edge while the height animates, and the chevron spins with
+  it. Gated on Animations.GroupboxCollapse, which defaults to true (independent of
+  the general Animations.Groupbox resize flag).
+
+* Tabboxes redesigned: the folder-tab buttons are now a clean icon/text strip with
+  a sliding accent underline and a smooth content-switch animation (underline slide
+  gated on Animations.SubTabUnderline, content slide on Animations.TabSwitch). Tabbox:AddTab(Name, IconName) — pass a name, an icon, or both ("" name = icon-only).
+
+[fixes]
+* Tabbox underline no longer spans the whole strip until the first tab switch: adding
+  a tab re-flexes the row, so the underline now re-measures against the active button.
+
+[features]
++ Groupbox:AddDiscordBox(Idx, Info) — a Discord-style promo card: banner, circular avatar overlapping it, status dot, title/subtitle, and a row of action buttons (copy an invite link, run a callback). Nothing is hardcoded — images, colours, labels and actions are all passed in; the accent defaults to Scheme.BlueColor. Methods: SetTitle/SetSubtitle/SetBanner/SetAvatar/SetStatus/SetAccent/SetLink/SetButtons/SetButtonText/SetBannerHeight/SetAvatarSize/SetVisible/GetTotalHeight.
++ Window:SetGlow(Enabled, Options?) — opt-in soft glow behind the window. Off by default and never forced/hidden (games' anticheats can flag unusual rendering). Options: { Color: Color3? (defaults to & follows the accent color), Transparency: number?, Radius: number? }. Also settable at creation via Glow = true.
++ Window:GetSizePosition() / Window:SetSizePosition(Size?, Position?) — read/apply the window size & position (clamped to the viewport & min size, relayouts tabs).
++ SaveManager now saves & restores the UI size and position. Skip it with SaveManager:SetIgnoreIndexes({ "WindowLayout" }).
+```
+
+## 29.08.2026
+
+```diff
+[features]
++ Groupbox:AddPriorityDropdown(Idx, Info) — a searchable, drag-to-rank priority list (no selecting; drag rows above/below to order them). Grab a row anywhere, clamped + auto-scroll, mouse/touch. Has an expand panel (Expand/Collapse/ToggleExpanded/IsExpanded) for easier management. Saves/loads with SaveManager.
+```
+
+## 20.09.2026
+
+```diff
+[features]
++ KeepDisabledValuePosition for Dropdown (keeps DisabledValues in their Values order instead of moving them to the end)
++ SetMaxPopOutHeight(MaxHeight: number) for popout groupboxes and tabboxes
++ SetPopOutWidth(Width: number) for popout groupboxes and tabboxes
++ KeyPicker:SetMenuVisibility(Visible: boolean)
+
+[fixed]
++ Fixed text and UI elements sizing incorrectly at different DPI scales or screen resolutions
++ Fixed dropdown arrows overlapping the footer when scrolling
+```
+
+## 04.09.2026
+
+```diff
+[features]
++ TabButtonsStyle for CreateWindow (Gap, Padding, CornerRadius, Indicator, IndicatorWidth, IndicatorHeight)
++ Library.Cursor:ChangeCrossColor(Color)
++ Library.Cursor:ResetCross()
++ Library.Cursor:ChangeIcon(ImageId)
++ Library.Cursor:ChangeIconColor(Color)
++ Library.Cursor:ChangeIconSize(Size)
++ Library.Cursor:ResetIcon()
++ Library.Cursor:ResetCursor()
+
+[changes]
++ Library:ChangeCursorCrossColor, ResetCursorCross, ChangeCursorIcon, ChangeCursorIconColor, ChangeCursorIconSize and ResetCursorIcon are deprecated; use Library.Cursor instead
+
+[fixed]
++ Fixed KeyPickers not updating visually when toggled from the keybind menu
+```
+
+## 31.08.2026
+
+```diff
+[features]
++ Tooltip support for tab buttons
+
+[changes]
++ ColorPickers use the smallest possible size on Mobile now
++ SetValue will now set the Value but will not run the Callbacks when the element is disabled
++ Search now switches to the tab with the most prominent match
+
+[fixed]
++ Fixed notifications resizing incorrectly
++ Fixed Toggle and Lock buttons on mobile impossible to click
++ Fixed KeyPickers and ColorPickers still able to be changed while disabled in the UI
++ Fixed KeyPickers and ColorPickers not updating visually if they are disabled or not
 ```
 
 ## 25.08.2026
